@@ -1,0 +1,2 @@
+# SPA health 경로 — Caddyfile 의 `handle /health` 블록과 일치해야 한다.
+health: /health

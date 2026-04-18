@@ -1,0 +1,26 @@
+{
+  "name": "__APP_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "./scripts/init.sh",
+    "service:add": "node --disable-warning=ExperimentalWarning ./scripts/add-service.ts",
+    "test:gen": "./scripts/test-generate.sh",
+    "test:sandbox": "./scripts/test-sandbox.sh",
+    "build": "pnpm -r --parallel build",
+    "test": "pnpm -r --parallel test",
+    "lint": "pnpm -r --parallel lint",
+    "type-check": "pnpm -r --parallel type-check"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.30.3"
+}

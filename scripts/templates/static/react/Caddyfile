@@ -1,0 +1,27 @@
+# homelab 규약: port 3000, Traefik이 TLS 종료하므로 caddy는 HTTP만.
+{
+	auto_https off
+	admin off
+	persist_config off
+}
+
+:3000 {
+	root * /srv
+	encode gzip zstd
+
+	# health probe — homelab IngressRoute의 startup/liveness/readiness가 호출
+	handle /health {
+		respond "ok" 200
+	}
+
+	# index.html — 재배포 시 즉시 반영
+	header /index.html Cache-Control "no-store, must-revalidate"
+
+	# 해시된 assets — 1년 immutable
+	@assets path_regexp \.(js|css|png|jpg|jpeg|gif|svg|woff2?|ico|webp|avif)$
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# SPA fallback: 존재하지 않는 경로는 index.html로
+	try_files {path} /index.html
+	file_server
+}
