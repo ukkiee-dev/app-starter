@@ -172,7 +172,63 @@ docker build \
 - **Dockerfile 경로**: 반드시 `services/<service>/Dockerfile`
 - **K8s namespace**: `<my-app>` (한 프로젝트 = 한 namespace)
 - **port**: HTTP 서비스는 3000 고정
-- **.app-config.yml**: `health` 필드만. icon/description은 homelab의 `update-app-config.yml` dispatch 로 관리
+- **.app-config.yml**: 서비스의 **single source of truth** (`type` · `health` · `icon` · `description` · `database`). push 시 homelab `_sync-app-config.yml` 이 반영 (자세한 스키마는 아래 섹션 참고)
+
+---
+
+## `.app-config.yml` 스키마
+
+서비스의 **single source of truth**. `pnpm service:add` 로 생성된 각 서비스의 `services/<name>/.app-config.yml` 에 위치한다. main push 시 homelab `_sync-app-config.yml` 이 변경사항을 감지해 매니페스트에 반영 (`database` 블록은 immutable — drift 감지 시 오류).
+
+### HTTP service (web · static)
+
+```yaml
+# type 필드 없음 = HTTP service 기본 (포트 3000, IngressRoute, Service, Homepage 자동)
+# web 과 static 의 차이는 Dockerfile 만 — setup-app 관점에서 동일.
+
+health: /health                # 헬스체크 경로 (`/` 로 시작)
+icon: mdi-application          # Homepage 아이콘 (mdi-* · si-* · <name>.png)
+description: ""                # 빈 문자열이면 repo description 사용
+
+# database:                    # (선택) 주석 해제 시 CNPG 클러스터 생성/연결
+#   name: myapp_db             # owner — 신규 DB 소유자
+#   # storage: 10Gi            # PVC 크기 (기본 10Gi, local-path 는 resize 불가)
+```
+
+### Worker service (HTTP 노출 없음)
+
+```yaml
+type: worker                   # worker 일 때만 명시. 포트·IngressRoute·Homepage skip.
+
+# health / icon / description 은 worker 에서 무시됨.
+
+# database:                    # (일반적) 같은 project owner 의 DB 참조
+#   ref: api                   # owner 서비스 이름
+```
+
+### `database` 블록 — `name` vs `ref` 이분법
+
+| 모드 | 스키마 | 의미 |
+|------|--------|------|
+| **owner** | `database: { name: <db>, storage?: <size> }` | 신규 CNPG 클러스터를 이 서비스가 소유 |
+| **reference** | `database: { ref: <svc> }` | 같은 project 내 다른 서비스(owner)의 DB 를 공유 |
+
+- `name` · `ref` 는 상호 배타 — 둘 중 하나만.
+- `database` 블록 자체가 없으면 DB 없음 (기존 앱 동작 유지).
+
+### 필드 요약
+
+| 필드 | 타입 | 필수 | 기본값 | 검증 |
+|------|------|------|--------|------|
+| `type` | string | ❌ | `""` (= HTTP service) | `""` 또는 `worker` 만 허용 |
+| `health` | string | ❌ | `/health` | `/` 로 시작 · HTTP service 만 사용 |
+| `icon` | string | ❌ | `mdi-application` | — |
+| `description` | string | ❌ | repo 의 description | — |
+| `database.name` | string | ❌ | — | PostgreSQL identifier (소문자·숫자·_) |
+| `database.ref` | string | ❌ | — | 같은 project 내 owner service-name |
+| `database.storage` | string | ❌ | `10Gi` | Kubernetes storage quantity (`name` 과만 조합) |
+
+> **type 필드 deprecation**: 이전 스키마의 `type: web` · `type: static` 은 경고와 함께 HTTP service 로 처리된다 (신규 서비스는 `type` 생략 권장). `type: worker` 는 유지.
 
 ---
 

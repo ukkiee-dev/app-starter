@@ -1,0 +1,21 @@
+# Worker service (백그라운드 처리 — 포트 없음)
+#
+# worker 타입은 포트·IngressRoute·Service·Homepage annotation 모두 skip 된다.
+# 변경 후 push 하면 _sync-app-config.yml 이 homelab 에 반영 (database 블록은 immutable).
+
+type: worker            # worker 일 때만 명시. 생략 시 HTTP service 기본 (web/static).
+
+# health / icon / description 은 worker 에서 무시됨 (HTTP 노출 없음).
+# 작성해도 경고 후 drop.
+
+# DB 사용 가능 — worker 도 DB 연결 OK.
+#
+# 옵션 1 — 신규 DB 소유자 (owner, 드문 케이스):
+# database:
+#   name: myapp_db
+#
+# 옵션 2 — 같은 project 의 owner DB 참조 (일반적):
+# database:
+#   ref: api             # owner 서비스 이름
+#
+# name · ref 는 상호 배타. database 블록 자체가 없으면 DB 없음.

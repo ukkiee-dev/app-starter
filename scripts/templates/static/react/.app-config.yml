@@ -1,2 +1,26 @@
-# SPA health 경로 — Caddyfile 의 `handle /health` 블록과 일치해야 한다.
+# Static service (caddy + 정적 빌드 — Dockerfile 이 결정)
+# type 필드 없음 = HTTP service 기본 (web 과 동일 처리, 차이는 Dockerfile 만)
+#
+# Caddyfile 의 `handle /health` 블록과 health 값이 일치해야 한다.
+# 변경 후 push 하면 _sync-app-config.yml 이 homelab 에 반영 (database 블록은 immutable).
+
+# 헬스체크 경로
 health: /health
+
+# Homepage 표시 (비우면 create-app 시 기본값 유지)
+icon: mdi-web          # mdi-*: materialdesignicons.com | si-*: simpleicons.org | 이름.png: github.com/walkxcode/dashboard-icons
+description: ""        # 빈 문자열이면 repo description 사용
+
+# DB 설정 (HTTP service 도 DB 사용 가능 — 주석 해제 시 CNPG 클러스터 생성/연결)
+#
+# 옵션 1 — 신규 DB 소유자 (owner):
+# database:
+#   name: myapp_db     # DB 이름 (PostgreSQL 규칙: 소문자·숫자·_, 63자 이하)
+#   # storage: 10Gi    # PVC 크기 (기본 10Gi, local-path 는 resize 불가)
+#
+# 옵션 2 — 다른 서비스의 DB 참조 (reference):
+# database:
+#   ref: api           # 같은 project 내 owner 서비스 이름 (name 대신 ref 사용)
+#
+# name · ref 는 상호 배타. 둘 중 하나만 지정.
+# database 블록 자체가 없으면 DB 없음.
