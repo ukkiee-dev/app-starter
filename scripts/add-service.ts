@@ -232,13 +232,16 @@ for (const src of files) {
 outro(`✅ services/${serviceName} 생성 완료 (type=${type}${framework ? `, framework=${framework}` : ''})`);
 
 // ── homelab 프로비저닝 안내 ──────────────────────────────────
+// 이 레포의 create-app.yml (workflow_dispatch caller) 을 호출해야 한다.
+// homelab 의 _create-app.yml 은 reusable (workflow_call) 이라 직접 dispatch 불가.
+// caller 의 read-config job 이 services/<svc>/.app-config.yml 을 읽어 전달한다.
 console.log('── homelab 프로비저닝 (이 서비스에 대해 최초 1회) ──');
 if (type === 'worker') {
-  console.log(`  gh workflow run _create-app.yml --repo ukkiee-dev/homelab \\`);
-  console.log(`    -f app-name=${appName} -f service-name=${serviceName}`);
+  console.log(`  gh workflow run create-app.yml \\`);
+  console.log(`    -f service-name=${serviceName}`);
   console.log(`  # subdomain 비움 → homelab이 worker 매니페스트(Deployment만) 자동 생성`);
 } else {
-  console.log(`  gh workflow run _create-app.yml --repo ukkiee-dev/homelab \\`);
-  console.log(`    -f app-name=${appName} -f service-name=${serviceName} \\`);
+  console.log(`  gh workflow run create-app.yml \\`);
+  console.log(`    -f service-name=${serviceName} \\`);
   console.log(`    -f subdomain=${serviceName}    # 필요한 서브도메인으로 변경`);
 }
