@@ -3,6 +3,9 @@ name: Create App
 # 이 워크플로우는 app-starter 템플릿으로 생성된 레포에서
 # 해당 앱을 homelab 에 등록 (DNS + Tunnel + k8s manifests + ArgoCD Application).
 # 템플릿 레포 자체에서는 실행 스킵.
+#
+# Phase 4 (2026-04-21): 입력 12개 → 2개로 축소.
+# 설정은 services/<service-name>/.app-config.yml 에서 읽어 homelab reusable workflow 에 전달.
 
 on:
   workflow_dispatch:
@@ -11,69 +14,11 @@ on:
         description: "모노레포 서비스 이름 (services/<name>). pnpm workspace 구조와 일치."
         required: true
         type: string
-      app-type:
-        description: "앱 타입 (web=3000, static=8080, worker=no-port)"
-        required: true
-        type: choice
-        options:
-          - web
-          - static
-          - worker
-        default: web
       subdomain:
         description: "서브도메인 (비우면 <repo>-<service>). DNS 레코드에 반영."
         required: false
         type: string
         default: ""
-      app-health:
-        description: "헬스체크 경로 (비우면 type 기본값: web=/health, static=/)"
-        required: false
-        type: string
-        default: ""
-      default-icon:
-        description: "홈페이지 아이콘 (MDI slug)"
-        required: false
-        type: string
-        default: "mdi-application"
-      database-enabled:
-        description: "CNPG PostgreSQL 클러스터 생성 여부 (Phase 7)"
-        required: false
-        type: boolean
-        default: false
-      database-mode:
-        description: "DB 모드 (database-enabled=true 필수). owner=신규 DB, reference=기존 DB 참조"
-        required: false
-        type: choice
-        options:
-          - none
-          - owner
-          - reference
-        default: none
-      database-name:
-        description: "Database 이름 (database-mode=owner 필수)"
-        required: false
-        type: string
-        default: ""
-      database-role:
-        description: "role 이름 (비우면 service-name 기반 기본값)"
-        required: false
-        type: string
-        default: ""
-      database-ref:
-        description: "참조 대상 owner 서비스 이름 (database-mode=reference 전용)"
-        required: false
-        type: string
-        default: ""
-      database-storage:
-        description: "PVC size (local-path 는 resize 미지원, 신중히 선택)"
-        required: false
-        type: string
-        default: "10Gi"
-      database-pg-image-tag:
-        description: "CNPG postgres 이미지 태그"
-        required: false
-        type: string
-        default: "16.13-standard-trixie"
 
 permissions:
   contents: write
@@ -84,23 +29,42 @@ concurrency:
 
 jobs:
   # ─── 템플릿 레포 자체에서는 스킵. derived 레포에서만 동작 ───
+  # .app-config.yml 을 caller 측에서 읽어 homelab reusable workflow 에 문자열로 전달.
+  # 이 패턴은 GitHub App token 이 repositories: homelab 으로 제한되어 있어
+  # homelab composite 가 앱 레포를 직접 checkout 할 수 없기 때문에 필요.
+  read-config:
+    if: github.repository != 'ukkiee-dev/app-starter'
+    runs-on: ubuntu-latest
+    outputs:
+      config: ${{ steps.cat.outputs.config }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: cat
+        env:
+          SERVICE: ${{ inputs.service-name }}
+        run: |
+          set -euo pipefail
+          CONFIG_PATH="services/${SERVICE}/.app-config.yml"
+          if [ ! -f "$CONFIG_PATH" ]; then
+            echo "::error::${CONFIG_PATH} not found. pnpm service:add 로 서비스를 먼저 생성하세요."
+            exit 1
+          fi
+          # GITHUB_OUTPUT multiline 구문
+          {
+            echo "config<<__EOF__"
+            cat "$CONFIG_PATH"
+            echo "__EOF__"
+          } >> "$GITHUB_OUTPUT"
+
   create:
+    needs: read-config
     if: github.repository != 'ukkiee-dev/app-starter'
     uses: ukkiee-dev/homelab/.github/workflows/_create-app.yml@main
     with:
-      app-name:              ${{ github.event.repository.name }}
-      subdomain:             ${{ inputs.subdomain }}
-      app-type:              ${{ inputs.app-type }}
-      app-health:            ${{ inputs.app-health }}
-      default-icon:          ${{ inputs.default-icon }}
-      service-name:          ${{ inputs.service-name }}
-      database-enabled:      ${{ inputs.database-enabled }}
-      database-mode:         ${{ inputs.database-mode }}
-      database-name:         ${{ inputs.database-name }}
-      database-role:         ${{ inputs.database-role }}
-      database-ref:          ${{ inputs.database-ref }}
-      database-storage:      ${{ inputs.database-storage }}
-      database-pg-image-tag: ${{ inputs.database-pg-image-tag }}
+      app-name:     ${{ github.event.repository.name }}
+      service-name: ${{ inputs.service-name }}
+      subdomain:    ${{ inputs.subdomain }}
+      config-yaml:  ${{ needs.read-config.outputs.config }}
     secrets:
       APP_ID:               ${{ secrets.HOMELAB_APP_ID }}
       APP_PRIVATE_KEY:      ${{ secrets.HOMELAB_APP_PRIVATE_KEY }}
