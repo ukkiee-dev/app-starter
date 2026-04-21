@@ -1,0 +1,112 @@
+name: Create App
+
+# 이 워크플로우는 app-starter 템플릿으로 생성된 레포에서
+# 해당 앱을 homelab 에 등록 (DNS + Tunnel + k8s manifests + ArgoCD Application).
+# 템플릿 레포 자체에서는 실행 스킵.
+
+on:
+  workflow_dispatch:
+    inputs:
+      service-name:
+        description: "모노레포 서비스 이름 (services/<name>). pnpm workspace 구조와 일치."
+        required: true
+        type: string
+      app-type:
+        description: "앱 타입 (web=3000, static=8080, worker=no-port)"
+        required: true
+        type: choice
+        options:
+          - web
+          - static
+          - worker
+        default: web
+      subdomain:
+        description: "서브도메인 (비우면 <repo>-<service>). DNS 레코드에 반영."
+        required: false
+        type: string
+        default: ""
+      app-health:
+        description: "헬스체크 경로 (비우면 type 기본값: web=/health, static=/)"
+        required: false
+        type: string
+        default: ""
+      default-icon:
+        description: "홈페이지 아이콘 (MDI slug)"
+        required: false
+        type: string
+        default: "mdi-application"
+      database-enabled:
+        description: "CNPG PostgreSQL 클러스터 생성 여부 (Phase 7)"
+        required: false
+        type: boolean
+        default: false
+      database-mode:
+        description: "DB 모드 (database-enabled=true 필수). owner=신규 DB, reference=기존 DB 참조"
+        required: false
+        type: choice
+        options:
+          - none
+          - owner
+          - reference
+        default: none
+      database-name:
+        description: "Database 이름 (database-mode=owner 필수)"
+        required: false
+        type: string
+        default: ""
+      database-role:
+        description: "role 이름 (비우면 service-name 기반 기본값)"
+        required: false
+        type: string
+        default: ""
+      database-ref:
+        description: "참조 대상 owner 서비스 이름 (database-mode=reference 전용)"
+        required: false
+        type: string
+        default: ""
+      database-storage:
+        description: "PVC size (local-path 는 resize 미지원, 신중히 선택)"
+        required: false
+        type: string
+        default: "10Gi"
+      database-pg-image-tag:
+        description: "CNPG postgres 이미지 태그"
+        required: false
+        type: string
+        default: "16.13-standard-trixie"
+
+concurrency:
+  group: homelab-terraform
+  cancel-in-progress: false
+
+jobs:
+  # ─── 템플릿 레포 자체에서는 스킵. derived 레포에서만 동작 ───
+  create:
+    if: github.repository != 'ukkiee-dev/app-starter'
+    uses: ukkiee-dev/homelab/.github/workflows/_create-app.yml@main
+    with:
+      app-name:              ${{ github.event.repository.name }}
+      subdomain:             ${{ inputs.subdomain }}
+      app-type:              ${{ inputs.app-type }}
+      app-health:            ${{ inputs.app-health }}
+      default-icon:          ${{ inputs.default-icon }}
+      service-name:          ${{ inputs.service-name }}
+      database-enabled:      ${{ inputs.database-enabled }}
+      database-mode:         ${{ inputs.database-mode }}
+      database-name:         ${{ inputs.database-name }}
+      database-role:         ${{ inputs.database-role }}
+      database-ref:          ${{ inputs.database-ref }}
+      database-storage:      ${{ inputs.database-storage }}
+      database-pg-image-tag: ${{ inputs.database-pg-image-tag }}
+    secrets:
+      APP_ID:               ${{ secrets.HOMELAB_APP_ID }}
+      APP_PRIVATE_KEY:      ${{ secrets.HOMELAB_APP_PRIVATE_KEY }}
+      TF_CLOUDFLARE_TOKEN:  ${{ secrets.TF_CLOUDFLARE_TOKEN }}
+      TF_ZONE_ID:           ${{ secrets.TF_ZONE_ID }}
+      TF_TUNNEL_ID:         ${{ secrets.TF_TUNNEL_ID }}
+      TF_ACCOUNT_ID:        ${{ secrets.TF_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      TF_DOMAIN:            ${{ secrets.TF_DOMAIN }}
+      TELEGRAM_BOT_TOKEN:   ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
