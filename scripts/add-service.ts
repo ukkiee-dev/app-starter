@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-/**
- * 서비스 추가 — scripts/templates/<type>/ 을 services/<name>/ 으로 복사·치환.
- *
- * Usage (인자):
- *   pnpm service:add <service-name> --type <web|static|worker>
- *
- * Usage (대화형):
- *   pnpm service:add                # 화살표 UI 로 모두 prompt
- *   pnpm service:add api            # type만 prompt
- */
 
 import { intro, outro, text, select, cancel, isCancel, log } from '@clack/prompts';
 import { chmod, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
@@ -19,9 +9,6 @@ import { fileURLToPath } from 'node:url';
 type ServiceType = 'web' | 'static' | 'worker';
 const SERVICE_TYPES: readonly ServiceType[] = ['web', 'static', 'worker'] as const;
 
-// type 별로 지원하는 framework 목록.
-// 빈 배열이면 framework 레이어 없이 templates/<type>/ 자체가 템플릿.
-// 단일 항목이면 prompt 없이 자동 선택.
 const FRAMEWORKS_BY_TYPE = {
   web: ['hono'],
   static: ['react'],
@@ -33,7 +20,6 @@ type Framework = (typeof FRAMEWORKS_BY_TYPE)[ServiceType][number];
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(SCRIPT_DIR, '..');
 
-// ── argv 파싱 (누락은 대화형으로 채움) ───────────────────────
 const argv = process.argv.slice(2);
 
 if (argv.includes('-h') || argv.includes('--help')) {
@@ -73,7 +59,6 @@ if (fwIdx !== -1) {
   framework = candidate as Framework;
 }
 
-// ── 루트 package.json 에서 app 이름 ──────────────────────────
 interface PackageJson {
   name?: string;
 }
@@ -105,7 +90,6 @@ if (!appName || appName === '__APP_NAME__') {
   process.exit(1);
 }
 
-// ── 대화형 prompt ────────────────────────────────────────────
 intro('🚀 서비스 추가');
 
 const nameRe = /^[a-z][a-z0-9-]*[a-z0-9]$/;
@@ -149,12 +133,10 @@ if (!type) {
   type = value;
 }
 
-// ── framework 결정 (type별 옵션) ─────────────────────────────
 const supported = FRAMEWORKS_BY_TYPE[type] as readonly string[];
 
 if (supported.length > 0) {
   if (framework) {
-    // 인자로 지정 — 유효성 검증
     if (!supported.includes(framework)) {
       console.error(
         `::error::type=${type} 은 framework '${framework}' 미지원 (options: ${supported.join(' | ')})`,
@@ -162,7 +144,6 @@ if (supported.length > 0) {
       process.exit(1);
     }
   } else if (supported.length === 1) {
-    // 옵션 1개면 자동 선택 + 알림
     framework = supported[0] as Framework;
     log.info(`프레임워크: ${framework} (기본)`);
   } else {
@@ -178,7 +159,6 @@ if (supported.length > 0) {
   }
 }
 
-// ── 대상 경로 (framework 레이어 포함) ────────────────────────
 const templateDir = framework
   ? join(SCRIPT_DIR, 'templates', type, framework)
   : join(SCRIPT_DIR, 'templates', type);
@@ -194,7 +174,6 @@ if (existsSync(serviceDir)) {
   process.exit(1);
 }
 
-// ── 재귀 복사 + 치환 ─────────────────────────────────────────
 async function walk(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const out: string[] = [];
@@ -223,7 +202,6 @@ for (const src of files) {
     .replaceAll('{{SERVICE_NAME}}', serviceName);
   await writeFile(dst, content);
 
-  // docker-entrypoint.sh 는 실행 권한
   if (rel === 'docker-entrypoint.sh') {
     await chmod(dst, 0o755);
   }
@@ -231,10 +209,6 @@ for (const src of files) {
 
 outro(`✅ services/${serviceName} 생성 완료 (type=${type}${framework ? `, framework=${framework}` : ''})`);
 
-// ── homelab 프로비저닝 안내 ──────────────────────────────────
-// 이 레포의 create-app.yml (workflow_dispatch caller) 을 호출해야 한다.
-// homelab 의 _create-app.yml 은 reusable (workflow_call) 이라 직접 dispatch 불가.
-// caller 의 read-config job 이 services/<svc>/.app-config.yml 을 읽어 전달한다.
 console.log('── homelab 프로비저닝 (이 서비스에 대해 최초 1회) ──');
 if (type === 'worker') {
   console.log(`  gh workflow run create-app.yml \\`);
