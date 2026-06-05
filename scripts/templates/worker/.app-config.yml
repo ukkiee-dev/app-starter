@@ -1,7 +1,8 @@
 # Worker service (백그라운드 처리 — 포트 없음)
 #
 # worker 타입은 포트·IngressRoute·Service·Homepage annotation 모두 skip 된다.
-# 변경 후 push 하면 _sync-app-config.yml 이 homelab 에 반영 (database 블록은 immutable).
+# 변경 후 push 하면 _sync-app-config.yml 이 실행된다 (worker 는 동기화할 health/Homepage 가 없고
+# database 블록 immutable 검증만 수행).
 
 type: worker            # worker 일 때만 명시. 생략 시 HTTP service 기본 (web/static).
 

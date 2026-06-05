@@ -2,14 +2,15 @@
 # type 필드 없음 = HTTP service 기본 (web 과 동일 처리, 차이는 Dockerfile 만)
 #
 # Caddyfile 의 `handle /health` 블록과 health 값이 일치해야 한다.
-# 변경 후 push 하면 _sync-app-config.yml 이 homelab 에 반영 (database 블록은 immutable).
+# 변경 후 push 하면 _sync-app-config.yml 이 health 를 homelab 에 동기화한다 (database 블록은 immutable).
 
-# 헬스체크 경로
+# 헬스체크 경로 (push 로 homelab 에 동기화되는 SoT)
 health: /health
 
-# Homepage 표시 (비우면 create-app 시 기본값 유지)
+# Homepage 타일 — 생성 시 homelab apps.json 으로 seed 된다. 이후 SoT 는 apps.json(homelab) 이라
+# 여기서 바꿔 push 해도 반영되지 않는다(homelab 에서 수정). 빈 값이면 create-app 시 기본값.
 icon: mdi-web          # mdi-*: materialdesignicons.com | si-*: simpleicons.org | 이름.png: github.com/walkxcode/dashboard-icons
-description: ""        # 빈 문자열이면 repo description 사용
+description: ""        # 빈 문자열이면 생성 시 repo description 사용
 
 # DB 설정 (HTTP service 도 DB 사용 가능 — 주석 해제 시 CNPG 클러스터 생성/연결)
 #
