@@ -5,7 +5,7 @@ name: Update App (reconcile)
 # homelab dispatch-mutation.yml(homelab-mutation concurrency)이 cross-repo 직렬화.
 #
 # destructive 케이스는 homelab setup-app/database composite 가 warn/error 처리.
-# health/icon/description 안전 필드는 build.yml 의 sync-app-config dispatch 가 별도 처리.
+# health 변경은 build.yml 의 sync-app-config dispatch 로 동기화 (icon/description 은 homelab apps.json SoT 라 동기화 대상 아님).
 
 on:
   push:

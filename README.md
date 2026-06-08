@@ -69,9 +69,9 @@ HTTP 서비스는 `type`을 생략하고, worker만 `type: worker`를 쓴다.
 
 ```yaml
 health: /health
-icon: mdi-application
-description: ""
 ```
+
+Homepage 타일(아이콘·설명)은 homelab `terraform/apps.json`에서 큐레이션한다 (생성 시 자동 seed).
 
 DB가 필요하면 아래 둘 중 하나를 쓴다.
 
