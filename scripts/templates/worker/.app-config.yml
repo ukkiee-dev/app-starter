@@ -6,8 +6,7 @@
 
 type: worker            # worker 일 때만 명시. 생략 시 HTTP service 기본 (web/static).
 
-# health / icon / description 은 worker 에서 무시됨 (HTTP 노출 없음).
-# 작성해도 경고 후 drop.
+# health 는 worker 에서 무시됨 (HTTP 노출 없음). Homepage 타일도 없음.
 
 # DB 사용 가능 — worker 도 DB 연결 OK.
 #
